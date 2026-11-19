@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>Modelo Físico & DER - Pastelaria BB (PostgreSQL / AWS RDS)</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #3b82f6;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --pk-bg: #fee2e2;
+      --pk-color: #991b1b;
+      --fk-bg: #e0e7ff;
+      --fk-color: #3730a3;
+      --uk-bg: #fef3c7;
+      --uk-color: #92400e;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: white;
+      padding: 24px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    header h1 {
+      font-size: clamp(1.3rem, 4vw, 1.8rem);
+      margin-bottom: 6px;
+    }
+
+    header p {
+      font-size: clamp(0.85rem, 2.5vw, 1rem);
+      opacity: 0.95;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(4px);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      background-color: var(--primary-light);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn:hover {
+      background-color: #2563eb;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+
+    .btn-secondary:hover {
+      background-color: #cbd5e1;
+    }
+
+    .zoom-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .card {
+      background: var(--surface);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      font-size: clamp(1.1rem, 3vw, 1.35rem);
+      color: var(--primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Diagrama Responsivo com Controles */
+    .diagram-wrapper {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 480px;
+    }
+
+    .diagram-viewport {
+      width: 100%;
+      height: 600px;
+      overflow: auto;
+      cursor: grab;
+      touch-action: pan-x pan-y pinch-zoom;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+    }
+
+    .diagram-viewport:active {
+      cursor: grabbing;
+    }
+
+    .diagram-content {
+      transform-origin: 0 0;
+      transition: transform 0.15s ease-out;
+      display: inline-block;
+      min-width: 100%;
+    }
+
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .mermaid svg {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    /* Dicionário de Dados em Grid Responsiva */
+    .metadata-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .entity-box {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      background: #f8fafc;
+      transition: box-shadow 0.2s;
+    }
+
+    .entity-box:hover {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .entity-box h3 {
+      font-size: 0.95rem;
+      color: var(--primary);
+      border-bottom: 2px solid #cbd5e1;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+    }
+
+    .entity-box ul {
+      list-style: none;
+      font-size: 0.85rem;
+    }
+
+    .entity-box li {
+      padding: 4px 0;
+      border-bottom: 1px dashed var(--border);
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .badge-pk {
+      background: var(--pk-bg);
+      color: var(--pk-color);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .badge-fk {
+      background: var(--fk-bg);
+      color: var(--fk-color);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .badge-uk {
+      background: var(--uk-bg);
+      color: var(--uk-color);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* Estilos de Impressão */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .diagram-viewport {
+        height: auto;
+        overflow: visible;
+      }
+      .card {
+        border: none;
+        box-shadow: none;
+        padding: 12px 0;
+        page-break-inside: avoid;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+    }
+
+    /* Ajustes Mobile */
+    @media (max-width: 640px) {
+      body {
+        padding: 8px;
+      }
+      header {
+        padding: 16px;
+      }
+      .card {
+        padding: 14px;
+      }
+      .diagram-viewport {
+        height: 420px;
+        padding: 10px;
+      }
+      .zoom-hint {
+        display: none;
+      }
+      .toolbar {
+        gap: 6px;
+      }
+      .btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>📐 Modelo Físico Relacional & Dicionário de Dados</h1>
+      <p>Sistema Comercial Pastelaria BB • Hospedado no PostgreSQL (AWS RDS)</p>
+      <div class="badges">
+        <span class="badge">🐘 PostgreSQL 16+</span>
+        <span class="badge">☁️ AWS RDS Free Tier</span>
+        <span class="badge">📊 15 Tabelas</span>
+        <span class="badge">📱 100% Responsivo</span>
+      </div>
+    </header>
+
+    <div class="toolbar no-print">
+      <button class="btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+      <button class="btn btn-secondary" onclick="zoomIn()">➕ Zoom In</button>
+      <button class="btn btn-secondary" onclick="zoomOut()">➖ Zoom Out</button>
+      <button class="btn btn-secondary" onclick="resetZoom()">↺ Resetar</button>
+      <span class="zoom-hint">💡 Dica: Role ou use os botões para dar zoom e arraste para navegar.</span>
+    </div>
+
+    <!-- Card 1: Diagrama Entidade-Relacionamento Interativo -->
+    <div class="card">
+      <h2>📊 Diagrama Entidade-Relacionamento (DER)</h2>
+      <div class="diagram-wrapper">
+        <div class="diagram-viewport" id="viewport">
+          <div class="diagram-content" id="content">
+            <pre class="mermaid">
+erDiagram
+    Empresa ||--o{ Filial : "possui (1:N)"
+    Empresa ||--o{ Endereco : "possui (1:N)"
+    Filial ||--o{ Endereco : "localizada_em (1:N)"
+    Cliente ||--o{ Endereco : "reside_em (1:N)"
+    
+    Cargo ||--o{ Funcionario : "atribui (1:N)"
+    Filial ||--o{ Funcionario : "emprega (1:N)"
+    
+    Categoria ||--o{ Produto : "classifica (1:N)"
+    Estoque ||--o{ Produto : "controla (1:N)"
+    
+    Fornecedor ||--o{ Fornecedor_Produto : "fornece (N:M)"
+    Produto ||--o{ Fornecedor_Produto : "fornecido_por (N:M)"
+    
+    Cliente ||--o{ Pedido : "realiza (1:N)"
+    Funcionario ||--o{ Pedido : "atende (1:N)"
+    Filial ||--o{ Pedido : "processa (1:N)"
+    Pagamento ||--o{ Pedido : "liquida (1:N)"
+    Endereco ||--o{ Pedido : "entrega_em (1:N)"
+    
+    Pedido ||--|{ Itens_Pedido : "contem (1:N)"
+    Produto ||--o{ Itens_Pedido : "compoe (1:N)"
+    
+    Estoque ||--o{ Movimentacao_Estoque : "registra (1:N)"
+    Produto ||--o{ Movimentacao_Estoque : "movimentado (1:N)"
+
+    Empresa {
+        INTEGER ID_Empresa PK
+        VARCHAR Razao_Social
+        VARCHAR Nome_Fantasia
+        VARCHAR CNPJ UK
+        DATE Data_Cadastro
+        VARCHAR Status
+    }
+
+    Filial {
+        INTEGER ID_Filial PK
+        INTEGER ID_Empresa FK
+        VARCHAR Razao_Social
+        VARCHAR Nome_Fantasia
+        VARCHAR CNPJ UK
+        DATE Data_Abertura
+        VARCHAR Status
+    }
+
+    Cargo {
+        INTEGER ID_Cargo PK
+        VARCHAR Nome_Cargo
+        DECIMAL Salario
+    }
+
+    Funcionario {
+        INTEGER ID_Funcionario PK
+        INTEGER ID_Filial FK
+        INTEGER ID_Cargo FK
+        VARCHAR Nome
+        VARCHAR Sobrenome
+        DATE Data_Nascimento
+        VARCHAR CPF UK
+        VARCHAR E_mail UK
+        VARCHAR Celular UK
+        VARCHAR Celular_2
+        DATE Data_Admissao
+        VARCHAR Status
+    }
+
+    Cliente {
+        INTEGER ID_Cliente PK
+        VARCHAR Nome
+        VARCHAR Sobrenome
+        DATE Data_Nascimento
+        VARCHAR CPF UK
+        VARCHAR Celular UK
+        VARCHAR Celular_2
+        VARCHAR E_mail UK
+        DATE Data_Cadastro
+        VARCHAR Status
+    }
+
+    Endereco {
+        INTEGER ID_Endereco PK
+        INTEGER ID_Cliente FK
+        INTEGER ID_Filial FK
+        INTEGER ID_Empresa FK
+        VARCHAR Logradouro
+        VARCHAR Numero
+        VARCHAR Complemento
+        VARCHAR Bairro
+        VARCHAR Cidade
+        VARCHAR Estado
+        VARCHAR CEP
+    }
+
+    Categoria {
+        INTEGER ID_Categoria PK
+        VARCHAR Nome UK
+        VARCHAR Descricao
+        VARCHAR Status
+        DATE Data_Cadastro
+    }
+
+    Estoque {
+        INTEGER ID_Estoque PK
+        INTEGER Quantidade
+        INTEGER Estoque_Minimo
+    }
+
+    Produto {
+        INTEGER ID_Produto PK
+        INTEGER ID_Categoria FK
+        INTEGER ID_Estoque FK
+        VARCHAR Nome
+        VARCHAR Descricao
+        DECIMAL Preco
+        DATE Data_Cadastro
+        VARCHAR Status
+        VARCHAR Codigo_Barras UK
+    }
+
+    Fornecedor {
+        INTEGER ID_Fornecedor PK
+        VARCHAR Razao_Social
+        VARCHAR Nome_Fantasia
+        VARCHAR CNPJ UK
+        VARCHAR Celular UK
+        VARCHAR Celular_2
+        VARCHAR E_mail UK
+        DATE Data_Cadastro
+        VARCHAR Status
+    }
+
+    Fornecedor_Produto {
+        INTEGER ID_Fornecedor PK_FK
+        INTEGER ID_Produto PK_FK
+    }
+
+    Pagamento {
+        INTEGER ID_Pagamento PK
+        VARCHAR Forma_Pagamento
+        DECIMAL Valor
+        DATE Data_Pagamento
+        VARCHAR Status
+    }
+
+    Pedido {
+        INTEGER ID_Pedido PK
+        INTEGER ID_Endereco FK
+        INTEGER ID_Cliente FK
+        INTEGER ID_Funcionario FK
+        INTEGER ID_Pagamento FK
+        INTEGER ID_Filial FK
+        DECIMAL Valor_Total
+        VARCHAR Status
+        DATE Data_Pedido
+        VARCHAR Observacao
+    }
+
+    Itens_Pedido {
+        INTEGER ID_Item PK
+        INTEGER ID_Pedido FK
+        INTEGER ID_Produto FK
+        INTEGER Quantidade
+        DECIMAL Preco_Unico
+    }
+
+    Movimentacao_Estoque {
+        INTEGER ID_Movimentacao PK
+        INTEGER ID_Estoque FK
+        INTEGER ID_Produto FK
+        VARCHAR Tipo
+        INTEGER Quantidade
+        DATE Data_Movimentacao
+        VARCHAR Observacao
+    }
+            </pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Dicionário das Tabelas e Cardinalidades -->
+    <div class="card page-break">
+      <h2>📖 Dicionário das Tabelas e Cardinalidades</h2>
+      <div class="metadata-grid">
+        <div class="entity-box">
+          <h3>🏢 Corporativo & Filiais</h3>
+          <ul>
+            <li><span class="badge-pk">PK</span> Empresa.ID_Empresa</li>
+            <li><span class="badge-uk">UK</span> Empresa.CNPJ (14 dígitos)</li>
+            <li><span class="badge-pk">PK</span> Filial.ID_Filial</li>
+            <li><span class="badge-fk">FK</span> Filial.ID_Empresa → Empresa</li>
+            <li><span class="badge-uk">UK</span> Filial.CNPJ (14 dígitos)</li>
+          </ul>
+        </div>
+
+        <div class="entity-box">
+          <h3>👥 Recursos Humanos</h3>
+          <ul>
+            <li><span class="badge-pk">PK</span> Cargo.ID_Cargo</li>
+            <li><span class="badge-pk">PK</span> Funcionario.ID_Funcionario</li>
+            <li><span class="badge-fk">FK</span> Funcionario.ID_Cargo → Cargo</li>
+            <li><span class="badge-fk">FK</span> Funcionario.ID_Filial → Filial</li>
+            <li><span class="badge-uk">UK</span> Funcionario.CPF & E_mail</li>
+          </ul>
+        </div>
+
+        <div class="entity-box">
+          <h3>👤 Clientes & Contatos</h3>
+          <ul>
+            <li><span class="badge-pk">PK</span> Cliente.ID_Cliente</li>
+            <li><span class="badge-uk">UK</span> Cliente.CPF (Regex: 11 dígitos)</li>
+            <li><span class="badge-uk">UK</span> Cliente.Celular & E_mail</li>
+            <li><span class="badge-pk">PK</span> Endereco.ID_Endereco</li>
+            <li><span class="badge-fk">FK</span> Vinculado exclusivamente (nonnulls)</li>
+          </ul>
+        </div>
+
+        <div class="entity-box">
+          <h3>📦 Catálogo, Estoque & Fornecedor</h3>
+          <ul>
+            <li><span class="badge-pk">PK</span> Categoria.ID_Categoria</li>
+            <li><span class="badge-pk">PK</span> Estoque.ID_Estoque</li>
+            <li><span class="badge-pk">PK</span> Produto.ID_Produto</li>
+            <li><span class="badge-fk">FK</span> Produto.ID_Categoria & ID_Estoque</li>
+            <li><span class="badge-pk">PK</span> Fornecedor_Produto (N:M)</li>
+          </ul>
+        </div>
+
+        <div class="entity-box">
+          <h3>🛒 Vendas, Pedidos & Itens</h3>
+          <ul>
+            <li><span class="badge-pk">PK</span> Pedido.ID_Pedido</li>
+            <li><span class="badge-fk">FK</span> Pedido.ID_Cliente & ID_Filial</li>
+            <li><span class="badge-fk">FK</span> Pedido.ID_Funcionario & ID_Pagamento</li>
+            <li><span class="badge-pk">PK</span> Itens_Pedido.ID_Item</li>
+            <li><span class="badge-fk">FK</span> Itens_Pedido.ID_Pedido & ID_Produto</li>
+          </ul>
+        </div>
+
+        <div class="entity-box">
+          <h3>💳 Pagamento & Rastreamento</h3>
+          <ul>
+            <li><span class="badge-pk">PK</span> Pagamento.ID_Pagamento</li>
+            <li><span class="badge-pk">PK</span> Movimentacao_Estoque.ID_Movimentacao</li>
+            <li><span class="badge-fk">FK</span> Movimentacao → Estoque & Produto</li>
+            <li><span class="badge-uk">CHK</span> Tipo IN ('Entrada', 'Saída')</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose',
+      er: {
+        useMaxWidth: true
+      }
+    });
+
+    let currentScale = 1.0;
+    const content = document.getElementById('content');
+    const viewport = document.getElementById('viewport');
+
+    function updateZoom() {
+      content.style.transform = `scale(${currentScale})`;
+    }
+
+    function zoomIn() {
+      if (currentScale < 2.5) {
+        currentScale += 0.15;
+        updateZoom();
+      }
+    }
+
+    function zoomOut() {
+      if (currentScale > 0.4) {
+        currentScale -= 0.15;
+        updateZoom();
+      }
+    }
+
+    function resetZoom() {
+      currentScale = 1.0;
+      updateZoom();
+    }
+
+    // Navegação por arraste (Mouse drag para desktop)
+    let isDown = false;
+    let startX, startY, scrollLeft, scrollTop;
+
+    viewport.addEventListener('mousedown', (e) => {
+      isDown = true;
+      startX = e.pageX - viewport.offsetLeft;
+      startY = e.pageY - viewport.offsetTop;
+      scrollLeft = viewport.scrollLeft;
+      scrollTop = viewport.scrollTop;
+    });
+
+    viewport.addEventListener('mouseleave', () => isDown = false);
+    viewport.addEventListener('mouseup', () => isDown = false);
+
+    viewport.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - viewport.offsetLeft;
+      const y = e.pageY - viewport.offsetTop;
+      const walkX = (x - startX) * 1.5;
+      const walkY = (y - startY) * 1.5;
+      viewport.scrollLeft = scrollLeft - walkX;
+      viewport.scrollTop = scrollTop - walkY;
+    });
+  </script>
+</body>
+</html>
